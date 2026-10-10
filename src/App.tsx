@@ -14,6 +14,7 @@ import {
 import { 
   getInitialAppState, 
   saveToStorage, 
+  loadFromStorage,
   STORAGE_KEYS, 
   resetAllDataToDefault 
 } from './utils/storage';
@@ -33,10 +34,18 @@ import { AIAssistantView } from './components/AIAssistantView';
 import { SettingsView } from './components/SettingsView';
 
 export default function App() {
-  // Navigation tab state
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  // Navigation tab state persisted across reloads
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    const savedTab = loadFromStorage<ActiveTab>(STORAGE_KEYS.ACTIVE_TAB, 'dashboard');
+    const validTabs: ActiveTab[] = [
+      'dashboard', 'students', 'attendance', 'violations', 'rewards',
+      'conduct', 'parents', 'policies', 'reports', 'ai-assistant', 'settings'
+    ];
+    return validTabs.includes(savedTab) ? savedTab : 'dashboard';
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedStudentForModal, setSelectedStudentForModal] = useState<Student | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
 
   // App Domain State loaded from localStorage
   const [initialData] = useState(() => getInitialAppState());
@@ -50,38 +59,72 @@ export default function App() {
   const [parents, setParents] = useState<ParentContact[]>(initialData.parents);
   const [policies, setPolicies] = useState<PolicyDocumentItem[]>(initialData.policies);
 
+  const checkSaveResult = (res: { success: boolean; error?: string }) => {
+    if (!res.success && res.error) {
+      setStorageError(res.error);
+      return false;
+    }
+    setStorageError(null);
+    return true;
+  };
+
+  // Persist activeTab
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.ACTIVE_TAB, activeTab);
+  }, [activeTab]);
+
   // Auto-sync state to localStorage whenever it changes
   useEffect(() => {
-    saveToStorage(STORAGE_KEYS.CLASS_INFO, classInfo);
+    checkSaveResult(saveToStorage(STORAGE_KEYS.CLASS_INFO, classInfo));
   }, [classInfo]);
 
   useEffect(() => {
-    saveToStorage(STORAGE_KEYS.STUDENTS, students);
+    checkSaveResult(saveToStorage(STORAGE_KEYS.STUDENTS, students));
   }, [students]);
 
   useEffect(() => {
-    saveToStorage(STORAGE_KEYS.ATTENDANCE, attendance);
+    checkSaveResult(saveToStorage(STORAGE_KEYS.ATTENDANCE, attendance));
   }, [attendance]);
 
   useEffect(() => {
-    saveToStorage(STORAGE_KEYS.VIOLATIONS, violations);
+    checkSaveResult(saveToStorage(STORAGE_KEYS.VIOLATIONS, violations));
   }, [violations]);
 
   useEffect(() => {
-    saveToStorage(STORAGE_KEYS.REWARDS, rewards);
+    checkSaveResult(saveToStorage(STORAGE_KEYS.REWARDS, rewards));
   }, [rewards]);
 
   useEffect(() => {
-    saveToStorage(STORAGE_KEYS.CONDUCT, conduct);
+    checkSaveResult(saveToStorage(STORAGE_KEYS.CONDUCT, conduct));
   }, [conduct]);
 
   useEffect(() => {
-    saveToStorage(STORAGE_KEYS.PARENTS, parents);
+    checkSaveResult(saveToStorage(STORAGE_KEYS.PARENTS, parents));
   }, [parents]);
 
   useEffect(() => {
-    saveToStorage(STORAGE_KEYS.POLICIES, policies);
+    checkSaveResult(saveToStorage(STORAGE_KEYS.POLICIES, policies));
   }, [policies]);
+
+  // Helper to update students & sync classInfo student counts immediately to localStorage
+  const syncStudentsAndClassCounts = (nextStudents: Student[]) => {
+    const resStudents = saveToStorage(STORAGE_KEYS.STUDENTS, nextStudents);
+    if (!checkSaveResult(resStudents)) return false;
+
+    const maleCount = nextStudents.filter(s => s.gender === 'Nam').length;
+    const femaleCount = nextStudents.filter(s => s.gender === 'Nữ').length;
+    setClassInfo(prevClass => {
+      const nextClass: ClassInfo = {
+        ...prevClass,
+        totalStudents: nextStudents.length,
+        maleCount,
+        femaleCount
+      };
+      saveToStorage(STORAGE_KEYS.CLASS_INFO, nextClass);
+      return nextClass;
+    });
+    return true;
+  };
 
   // Counts for sidebar badges
   const sidebarCounts = {
@@ -94,98 +137,184 @@ export default function App() {
 
   // Student Handlers
   const handleAddStudent = (newStudent: Student) => {
-    setStudents(prev => [newStudent, ...prev]);
+    setStudents(prev => {
+      const next = [newStudent, ...prev];
+      syncStudentsAndClassCounts(next);
+      return next;
+    });
+  };
+
+  const handleBulkAddStudents = (newStudents: Student[]) => {
+    setStudents(prev => {
+      const next = [...newStudents, ...prev];
+      syncStudentsAndClassCounts(next);
+      return next;
+    });
   };
 
   const handleUpdateStudent = (updatedStudent: Student) => {
-    setStudents(prev => prev.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+    setStudents(prev => {
+      const next = prev.map(s => s.id === updatedStudent.id ? updatedStudent : s);
+      syncStudentsAndClassCounts(next);
+      return next;
+    });
   };
 
   const handleDeleteStudent = (studentId: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa học sinh này khỏi danh sách lớp?')) {
-      setStudents(prev => prev.filter(s => s.id !== studentId));
-      setViolations(prev => prev.filter(v => v.studentId !== studentId));
-      setRewards(prev => prev.filter(r => r.studentId !== studentId));
-      setParents(prev => prev.filter(p => p.studentId !== studentId));
-      setPolicies(prev => prev.filter(p => p.studentId !== studentId));
-    }
+    setStudents(prev => {
+      const next = prev.filter(s => s.id !== studentId);
+      syncStudentsAndClassCounts(next);
+      return next;
+    });
+    setViolations(prev => {
+      const next = prev.filter(v => v.studentId !== studentId);
+      saveToStorage(STORAGE_KEYS.VIOLATIONS, next);
+      return next;
+    });
+    setRewards(prev => {
+      const next = prev.filter(r => r.studentId !== studentId);
+      saveToStorage(STORAGE_KEYS.REWARDS, next);
+      return next;
+    });
+    setParents(prev => {
+      const next = prev.filter(p => p.studentId !== studentId);
+      saveToStorage(STORAGE_KEYS.PARENTS, next);
+      return next;
+    });
+    setPolicies(prev => {
+      const next = prev.filter(p => p.studentId !== studentId);
+      saveToStorage(STORAGE_KEYS.POLICIES, next);
+      return next;
+    });
   };
 
   // Attendance Handlers
   const handleSaveAttendance = (record: AttendanceRecord) => {
     setAttendance(prev => {
       const idx = prev.findIndex(a => a.date === record.date);
+      let next: AttendanceRecord[];
       if (idx >= 0) {
-        const next = [...prev];
+        next = [...prev];
         next[idx] = record;
-        return next;
+      } else {
+        next = [record, ...prev];
       }
-      return [record, ...prev];
+      checkSaveResult(saveToStorage(STORAGE_KEYS.ATTENDANCE, next));
+      return next;
     });
   };
 
   // Violations Handlers
   const handleAddViolation = (v: ViolationRecord) => {
-    setViolations(prev => [v, ...prev]);
+    setViolations(prev => {
+      const next = [v, ...prev];
+      checkSaveResult(saveToStorage(STORAGE_KEYS.VIOLATIONS, next));
+      return next;
+    });
   };
 
   const handleUpdateViolation = (v: ViolationRecord) => {
-    setViolations(prev => prev.map(item => item.id === v.id ? v : item));
+    setViolations(prev => {
+      const next = prev.map(item => item.id === v.id ? v : item);
+      checkSaveResult(saveToStorage(STORAGE_KEYS.VIOLATIONS, next));
+      return next;
+    });
   };
 
   const handleDeleteViolation = (id: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa bản ghi vi phạm này?')) {
-      setViolations(prev => prev.filter(item => item.id !== id));
+      setViolations(prev => {
+        const next = prev.filter(item => item.id !== id);
+        checkSaveResult(saveToStorage(STORAGE_KEYS.VIOLATIONS, next));
+        return next;
+      });
     }
   };
 
   // Rewards Handlers
   const handleAddReward = (r: RewardRecord) => {
-    setRewards(prev => [r, ...prev]);
+    setRewards(prev => {
+      const next = [r, ...prev];
+      checkSaveResult(saveToStorage(STORAGE_KEYS.REWARDS, next));
+      return next;
+    });
   };
 
   const handleUpdateReward = (r: RewardRecord) => {
-    setRewards(prev => prev.map(item => item.id === r.id ? r : item));
+    setRewards(prev => {
+      const next = prev.map(item => item.id === r.id ? r : item);
+      checkSaveResult(saveToStorage(STORAGE_KEYS.REWARDS, next));
+      return next;
+    });
   };
 
   const handleDeleteReward = (id: string) => {
     if (window.confirm('Bạn có chắc muốn xóa bản ghi khen thưởng này?')) {
-      setRewards(prev => prev.filter(item => item.id !== id));
+      setRewards(prev => {
+        const next = prev.filter(item => item.id !== id);
+        checkSaveResult(saveToStorage(STORAGE_KEYS.REWARDS, next));
+        return next;
+      });
     }
   };
 
   // Conduct Handlers
   const handleUpdateConduct = (newConduct: ConductEvaluation[]) => {
     setConduct(newConduct);
+    checkSaveResult(saveToStorage(STORAGE_KEYS.CONDUCT, newConduct));
   };
 
   // Parent Contacts Handlers
   const handleAddContact = (c: ParentContact) => {
-    setParents(prev => [c, ...prev]);
+    setParents(prev => {
+      const next = [c, ...prev];
+      checkSaveResult(saveToStorage(STORAGE_KEYS.PARENTS, next));
+      return next;
+    });
   };
 
   const handleUpdateContact = (c: ParentContact) => {
-    setParents(prev => prev.map(item => item.id === c.id ? c : item));
+    setParents(prev => {
+      const next = prev.map(item => item.id === c.id ? c : item);
+      checkSaveResult(saveToStorage(STORAGE_KEYS.PARENTS, next));
+      return next;
+    });
   };
 
   const handleDeleteContact = (id: string) => {
     if (window.confirm('Bạn có chắc muốn xóa nhật ký trao đổi này?')) {
-      setParents(prev => prev.filter(item => item.id !== id));
+      setParents(prev => {
+        const next = prev.filter(item => item.id !== id);
+        checkSaveResult(saveToStorage(STORAGE_KEYS.PARENTS, next));
+        return next;
+      });
     }
   };
 
   // Policy Handlers
   const handleAddPolicy = (p: PolicyDocumentItem) => {
-    setPolicies(prev => [p, ...prev]);
+    setPolicies(prev => {
+      const next = [p, ...prev];
+      checkSaveResult(saveToStorage(STORAGE_KEYS.POLICIES, next));
+      return next;
+    });
   };
 
   const handleUpdatePolicy = (p: PolicyDocumentItem) => {
-    setPolicies(prev => prev.map(item => item.id === p.id ? p : item));
+    setPolicies(prev => {
+      const next = prev.map(item => item.id === p.id ? p : item);
+      checkSaveResult(saveToStorage(STORAGE_KEYS.POLICIES, next));
+      return next;
+    });
   };
 
   const handleDeletePolicy = (id: string) => {
     if (window.confirm('Bạn có chắc muốn xóa hồ sơ chế độ này?')) {
-      setPolicies(prev => prev.filter(item => item.id !== id));
+      setPolicies(prev => {
+        const next = prev.filter(item => item.id !== id);
+        checkSaveResult(saveToStorage(STORAGE_KEYS.POLICIES, next));
+        return next;
+      });
     }
   };
 
@@ -220,14 +349,38 @@ export default function App() {
         const content = e.target?.result as string;
         const parsed = JSON.parse(content);
         if (parsed.students && Array.isArray(parsed.students)) {
-          if (parsed.classInfo) setClassInfo(parsed.classInfo);
-          if (parsed.students) setStudents(parsed.students);
-          if (parsed.attendance) setAttendance(parsed.attendance);
-          if (parsed.violations) setViolations(parsed.violations);
-          if (parsed.rewards) setRewards(parsed.rewards);
-          if (parsed.conduct) setConduct(parsed.conduct);
-          if (parsed.parents) setParents(parsed.parents);
-          if (parsed.policies) setPolicies(parsed.policies);
+          if (parsed.classInfo) {
+            setClassInfo(parsed.classInfo);
+            saveToStorage(STORAGE_KEYS.CLASS_INFO, parsed.classInfo);
+          }
+          if (parsed.students) {
+            setStudents(parsed.students);
+            syncStudentsAndClassCounts(parsed.students);
+          }
+          if (parsed.attendance) {
+            setAttendance(parsed.attendance);
+            saveToStorage(STORAGE_KEYS.ATTENDANCE, parsed.attendance);
+          }
+          if (parsed.violations) {
+            setViolations(parsed.violations);
+            saveToStorage(STORAGE_KEYS.VIOLATIONS, parsed.violations);
+          }
+          if (parsed.rewards) {
+            setRewards(parsed.rewards);
+            saveToStorage(STORAGE_KEYS.REWARDS, parsed.rewards);
+          }
+          if (parsed.conduct) {
+            setConduct(parsed.conduct);
+            saveToStorage(STORAGE_KEYS.CONDUCT, parsed.conduct);
+          }
+          if (parsed.parents) {
+            setParents(parsed.parents);
+            saveToStorage(STORAGE_KEYS.PARENTS, parsed.parents);
+          }
+          if (parsed.policies) {
+            setPolicies(parsed.policies);
+            saveToStorage(STORAGE_KEYS.POLICIES, parsed.policies);
+          }
           alert('Khôi phục dữ liệu từ tệp thành công!');
         } else {
           alert('Tệp dữ liệu không hợp lệ!');
@@ -251,15 +404,24 @@ export default function App() {
     setPolicies(defaults.policies);
   };
 
-  const handleSaveAllChanges = () => {
-    saveToStorage(STORAGE_KEYS.CLASS_INFO, classInfo);
-    saveToStorage(STORAGE_KEYS.STUDENTS, students);
-    saveToStorage(STORAGE_KEYS.ATTENDANCE, attendance);
-    saveToStorage(STORAGE_KEYS.VIOLATIONS, violations);
-    saveToStorage(STORAGE_KEYS.REWARDS, rewards);
-    saveToStorage(STORAGE_KEYS.CONDUCT, conduct);
-    saveToStorage(STORAGE_KEYS.PARENTS, parents);
-    saveToStorage(STORAGE_KEYS.POLICIES, policies);
+  const handleSaveAllChanges = (): boolean => {
+    const results = [
+      saveToStorage(STORAGE_KEYS.CLASS_INFO, classInfo),
+      saveToStorage(STORAGE_KEYS.STUDENTS, students),
+      saveToStorage(STORAGE_KEYS.ATTENDANCE, attendance),
+      saveToStorage(STORAGE_KEYS.VIOLATIONS, violations),
+      saveToStorage(STORAGE_KEYS.REWARDS, rewards),
+      saveToStorage(STORAGE_KEYS.CONDUCT, conduct),
+      saveToStorage(STORAGE_KEYS.PARENTS, parents),
+      saveToStorage(STORAGE_KEYS.POLICIES, policies),
+    ];
+    const failed = results.find(r => !r.success);
+    if (failed) {
+      setStorageError(failed.error || 'Lỗi lưu dữ liệu vào bộ nhớ trình duyệt.');
+      return false;
+    }
+    setStorageError(null);
+    return true;
   };
 
   return (
@@ -283,7 +445,21 @@ export default function App() {
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           classInfo={classInfo}
           onSaveAllChanges={handleSaveAllChanges}
+          storageError={storageError}
         />
+
+        {/* Storage Error Banner if saving fails */}
+        {storageError && (
+          <div className="bg-rose-600 text-white px-4 py-2 text-xs font-semibold flex items-center justify-between">
+            <span>⚠️ Lỗi lưu trữ dữ liệu: {storageError}</span>
+            <button
+              onClick={() => setStorageError(null)}
+              className="underline ml-4 hover:text-rose-100"
+            >
+              Đóng
+            </button>
+          </div>
+        )}
 
         {/* Dynamic Views Viewport */}
         <main className="flex-1 overflow-y-auto">
@@ -314,9 +490,11 @@ export default function App() {
               parents={parents}
               policies={policies}
               onAddStudent={handleAddStudent}
+              onBulkAddStudents={handleBulkAddStudents}
               onUpdateStudent={handleUpdateStudent}
               onDeleteStudent={handleDeleteStudent}
               onAddReward={handleAddReward}
+              onAddViolation={handleAddViolation}
               initialSelectedStudent={selectedStudentForModal}
               onClearInitialSelected={() => setSelectedStudentForModal(null)}
             />

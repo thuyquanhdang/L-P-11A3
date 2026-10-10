@@ -56,9 +56,11 @@ interface StudentsViewProps {
   parents?: ParentContact[];
   policies?: PolicyDocumentItem[];
   onAddStudent: (student: Student) => void;
+  onBulkAddStudents?: (students: Student[]) => void;
   onUpdateStudent: (student: Student) => void;
   onDeleteStudent: (studentId: string) => void;
   onAddReward?: (reward: RewardRecord) => void;
+  onAddViolation?: (violation: ViolationRecord) => void;
   initialSelectedStudent?: Student | null;
   onClearInitialSelected?: () => void;
 }
@@ -87,9 +89,11 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   parents = [],
   policies = [],
   onAddStudent,
+  onBulkAddStudents,
   onUpdateStudent,
   onDeleteStudent,
   onAddReward,
+  onAddViolation,
   initialSelectedStudent = null,
   onClearInitialSelected
 }) => {
@@ -240,17 +244,17 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
               <span className="text-slate-300 hidden sm:inline">•</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-400 font-medium">Sĩ số:</span>
-                <strong className="text-slate-900 font-bold">{classInfo.totalStudents || stats.total} học sinh</strong>
+                <strong className="text-slate-900 font-bold">{stats.total} học sinh</strong>
               </div>
               <span className="text-slate-300 hidden sm:inline">•</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-400 font-medium">Nam:</span>
-                <strong className="text-blue-600 font-bold">{classInfo.maleCount || stats.male}</strong>
+                <strong className="text-blue-600 font-bold">{stats.male}</strong>
               </div>
               <span className="text-slate-300 hidden sm:inline">•</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-400 font-medium">Nữ:</span>
-                <strong className="text-rose-600 font-bold">{classInfo.femaleCount || stats.female}</strong>
+                <strong className="text-rose-600 font-bold">{stats.female}</strong>
               </div>
             </div>
           </div>
@@ -907,6 +911,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
             showSaveToast(`Đã lưu thành tích hoạt động của em ${reward.studentName} (${reward.team || 'Tổ'})!`);
           }
         }}
+        onAddViolation={(violation) => {
+          if (onAddViolation) {
+            onAddViolation(violation);
+            showSaveToast(`Đã ghi nhận và lưu vi phạm của học sinh ${violation.studentName}!`);
+          }
+        }}
       />
 
       <StudentFormModal
@@ -921,7 +931,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
             showSaveToast(`Đã lưu thay đổi thông tin học sinh ${student.fullName}!`);
           } else {
             onAddStudent(student);
-            showSaveToast(`Đã thêm học sinh ${student.fullName} vào lớp 11A3!`);
+            showSaveToast(`Đã thêm học sinh ${student.fullName} vào lớp ${classInfo.className}!`);
           }
         }}
         initialStudent={editingStudent}
@@ -932,7 +942,10 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         student={deletingStudent}
         isOpen={!!deletingStudent}
         onClose={() => setDeletingStudent(null)}
-        onConfirm={(id) => onDeleteStudent(id)}
+        onConfirm={(id) => {
+          onDeleteStudent(id);
+          showSaveToast('Đã xóa học sinh khỏi danh sách lớp và cập nhật bộ nhớ!');
+        }}
       />
 
       <ImportExportModal
@@ -941,7 +954,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         students={students}
         classInfo={classInfo}
         onImportStudents={(newStudents) => {
-          newStudents.forEach(st => onAddStudent(st));
+          if (onBulkAddStudents) {
+            onBulkAddStudents(newStudents);
+          } else {
+            newStudents.forEach(st => onAddStudent(st));
+          }
+          showSaveToast(`Đã nhập và lưu thành công ${newStudents.length} học sinh mới!`);
         }}
       />
 

@@ -36,6 +36,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const [formData, setFormData] = useState<ClassInfo>(classInfo);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  React.useEffect(() => {
+    setFormData(classInfo);
+  }, [classInfo]);
+
   const [googleSheetUrl, setGoogleSheetUrl] = useState<string>(() => {
     return localStorage.getItem(GOOGLE_SHEET_STORAGE_KEY) || '';
   });

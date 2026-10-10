@@ -32,6 +32,7 @@ import {
   ConductRating,
   AcademicRating,
   RewardCategory,
+  ViolationSeverity,
   TeamGroup
 } from '../../types';
 import { getDefaultTeamForStudent } from '../../mockData';
@@ -49,6 +50,7 @@ interface StudentDetailModalProps {
   onEditStudent: (student: Student) => void;
   onSaveStudent?: (updatedStudent: Student) => void;
   onAddReward?: (reward: RewardRecord) => void;
+  onAddViolation?: (violation: ViolationRecord) => void;
   onAddViolationForStudent?: (studentId: string, studentName: string) => void;
   onAddRewardForStudent?: (studentId: string, studentName: string) => void;
   onAddParentContactForStudent?: (studentId: string, studentName: string) => void;
@@ -66,7 +68,8 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
   classInfo,
   onEditStudent,
   onSaveStudent,
-  onAddReward
+  onAddReward,
+  onAddViolation
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'academic' | 'conduct' | 'emulation' | 'attendance' | 'parents'>('profile');
   const [editableScores, setEditableScores] = useState<SubjectScore[]>([]);
@@ -82,6 +85,12 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
   const [newActivityContent, setNewActivityContent] = useState('');
   const [newActivityCategory, setNewActivityCategory] = useState<RewardCategory>('Hoạt động tổ');
   const [newActivityPoints, setNewActivityPoints] = useState<number>(15);
+
+  const [showAddViolationForm, setShowAddViolationForm] = useState(false);
+  const [newViolationContent, setNewViolationContent] = useState('');
+  const [newViolationSeverity, setNewViolationSeverity] = useState<ViolationSeverity>('Nhẹ');
+  const [newViolationAction, setNewViolationAction] = useState('Nhắc nhở trước lớp và trừ điểm thi đua');
+  const [newViolationNotes, setNewViolationNotes] = useState('');
 
   React.useEffect(() => {
     if (student) {
@@ -589,12 +598,98 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Violations */}
                 <div className="bg-white rounded-xl border border-rose-200 p-4 shadow-xs">
-                  <div className="flex justify-between items-center mb-3">
+                  <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
                     <h5 className="font-bold text-rose-900 text-sm flex items-center gap-1.5">
                       <AlertTriangle className="w-4 h-4 text-rose-600" />
                       Vi phạm nề nếp ({studentViolations.length})
                     </h5>
+                    {onAddViolation && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAddViolationForm(!showAddViolationForm)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition cursor-pointer"
+                      >
+                        <PlusCircle className="w-3.5 h-3.5" />
+                        <span>+ Thêm vi phạm</span>
+                      </button>
+                    )}
                   </div>
+
+                  {showAddViolationForm && onAddViolation && (
+                    <div className="mb-3 p-3 rounded-xl bg-rose-50/90 border border-rose-200 space-y-2.5 text-xs">
+                      <div className="font-bold text-rose-900 flex items-center justify-between">
+                        <span>Ghi nhận vi phạm mới</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddViolationForm(false)}
+                          className="text-slate-400 hover:text-slate-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Nội dung vi phạm (VD: Đi học muộn, Chưa thuộc bài...)"
+                        value={newViolationContent}
+                        onChange={(e) => setNewViolationContent(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-rose-300 rounded-lg text-xs font-medium"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <select
+                          value={newViolationSeverity}
+                          onChange={(e) => setNewViolationSeverity(e.target.value as ViolationSeverity)}
+                          className="px-2.5 py-1.5 bg-white border border-rose-300 rounded-lg text-xs"
+                        >
+                          <option value="Nhẹ">Mức độ: Nhẹ</option>
+                          <option value="Trung bình">Mức độ: Trung bình</option>
+                          <option value="Nghiêm trọng">Mức độ: Nghiêm trọng</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Hình thức xử lý..."
+                          value={newViolationAction}
+                          onChange={(e) => setNewViolationAction(e.target.value)}
+                          className="px-2.5 py-1.5 bg-white border border-rose-300 rounded-lg text-xs"
+                        />
+                      </div>
+                      <textarea
+                        rows={2}
+                        placeholder="Ghi chú thêm của GVCN..."
+                        value={newViolationNotes}
+                        onChange={(e) => setNewViolationNotes(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-rose-300 rounded-lg text-xs"
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newViolationContent.trim()) return;
+                            onAddViolation({
+                              id: `vp-${Date.now()}`,
+                              studentId: student.id,
+                              studentName: student.fullName,
+                              date: new Date().toISOString().split('T')[0],
+                              content: newViolationContent.trim(),
+                              severity: newViolationSeverity,
+                              disciplinaryAction: newViolationAction.trim() || 'Nhắc nhở trước lớp',
+                              notes: newViolationNotes.trim(),
+                              resolved: false
+                            });
+                            setNewViolationContent('');
+                            setNewViolationNotes('');
+                            setShowAddViolationForm(false);
+                            setSaveSuccessToast(true);
+                            setTimeout(() => setSaveSuccessToast(false), 2500);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>Lưu vi phạm</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {studentViolations.length === 0 ? (
                     <p className="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-lg">Không có vi phạm ghi nhận.</p>
                   ) : (

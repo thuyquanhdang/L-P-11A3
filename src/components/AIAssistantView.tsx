@@ -15,6 +15,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { Student, ClassInfo } from '../types';
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../utils/storage';
 
 interface AIAssistantViewProps {
   classInfo: ClassInfo;
@@ -55,14 +56,19 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
   classInfo,
   students
 }) => {
-  const [messages, setMessages] = useState<Message[]>([
+  const defaultWelcome: Message[] = [
     {
       id: 'welcome',
       sender: 'assistant',
       text: `Xin chào Thầy/Cô **${classInfo.homeroomTeacher}**! 👋\n\nTôi là **Trợ lý AI Chủ nhiệm** của lớp **${classInfo.className}** (${classInfo.schoolName}).\n\nTôi có thể hỗ trợ Thầy/Cô:\n- ✍️ Soạn thảo tin nhắn gửi phụ huynh (Zalo / SMS / Giấy mời)\n- 📋 Viết lời nhận xét học bạ, sổ liên lạc điện tử chuẩn Thông tư 22\n- 🎯 Lên kịch bản tiết Sinh hoạt lớp theo chủ đề sinh động\n- 💡 Gợi ý giải pháp sư phạm cho các tình huống nề nếp, tâm lý học đường.\n\nThầy/Cô có thể bấm vào các gợi ý nhanh bên dưới hoặc gõ yêu cầu cụ thể!`,
       timestamp: 'Vừa xong'
     }
-  ]);
+  ];
+
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const saved = loadFromStorage<Message[]>(STORAGE_KEYS.AI_CHAT, defaultWelcome);
+    return Array.isArray(saved) && saved.length > 0 ? saved : defaultWelcome;
+  });
 
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -74,6 +80,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
   };
 
   useEffect(() => {
+    saveToStorage(STORAGE_KEYS.AI_CHAT, messages);
     scrollToBottom();
   }, [messages, isLoading]);
 

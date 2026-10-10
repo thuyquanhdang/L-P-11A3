@@ -19,7 +19,8 @@ interface HeaderProps {
   onOpenMobileMenu: () => void;
   classInfo: ClassInfo;
   onQuickAddStudent?: () => void;
-  onSaveAllChanges?: () => void;
+  onSaveAllChanges?: () => boolean | void;
+  storageError?: string | null;
 }
 
 const TAB_TITLES: Record<ActiveTab, { title: string; subtitle: string }> = {
@@ -41,9 +42,11 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   onOpenMobileMenu,
   classInfo,
-  onSaveAllChanges
+  onSaveAllChanges,
+  storageError
 }) => {
   const [savedNotice, setSavedNotice] = useState(false);
+  const [saveErrorNotice, setSaveErrorNotice] = useState(false);
   const currentTabInfo = TAB_TITLES[activeTab] || { title: 'Trợ Lý Chủ Nhiệm', subtitle: 'Hệ thống quản lý lớp học' };
 
   // Current formatted date in Vietnamese
@@ -54,7 +57,12 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleSaveClick = () => {
     if (onSaveAllChanges) {
-      onSaveAllChanges();
+      const ok = onSaveAllChanges();
+      if (ok === false) {
+        setSaveErrorNotice(true);
+        setTimeout(() => setSaveErrorNotice(false), 3000);
+        return;
+      }
     }
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 2500);
@@ -108,13 +116,17 @@ export const Header: React.FC<HeaderProps> = ({
             id="header-save-changes-button"
             onClick={handleSaveClick}
             className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer ${
-              savedNotice
+              saveErrorNotice || storageError
+                ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                : savedNotice
                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                 : 'bg-emerald-600 hover:bg-emerald-700 text-white'
             }`}
             title="Lưu mọi thay đổi"
           >
-            {savedNotice ? (
+            {saveErrorNotice || storageError ? (
+              <span>⚠️ Lỗi lưu!</span>
+            ) : savedNotice ? (
               <>
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Đã lưu thay đổi!</span>
