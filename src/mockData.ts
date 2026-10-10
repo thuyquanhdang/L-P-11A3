@@ -83,8 +83,23 @@ export const generateSampleWeeklyEmulation = (conductRating: 'Tốt' | 'Khá' | 
   return weeks;
 };
 
+// Helper phân công Tổ tự động dựa trên chức vụ hoặc mã học sinh
+export const getDefaultTeamForStudent = (id: string, role?: string): 'Tổ 1' | 'Tổ 2' | 'Tổ 3' | 'Tổ 4' => {
+  if (role === 'Tổ trưởng tổ 1' || id === 'hs11a3-38') return 'Tổ 1';
+  if (role === 'Tổ trưởng tổ 2' || id === 'hs11a3-25') return 'Tổ 2';
+  if (role === 'Tổ trưởng tổ 3' || id === 'hs11a3-06') return 'Tổ 3';
+  if (role === 'Tổ trưởng tổ 4' || id === 'hs11a3-31') return 'Tổ 4';
+
+  const num = parseInt(id.replace('hs11a3-', ''), 10);
+  if (isNaN(num)) return 'Tổ 1';
+  if (num <= 10) return 'Tổ 1';
+  if (num <= 20) return 'Tổ 2';
+  if (num <= 29) return 'Tổ 3';
+  return 'Tổ 4';
+};
+
 // 38 Học sinh Lớp 11A3 (14 Nam, 24 Nữ - GVCN: Đặng Thị Thùy Quanh)
-export const INITIAL_STUDENTS: Student[] = [
+const RAW_STUDENTS: Student[] = [
   {
     id: 'hs11a3-01',
     code: '11A3-01',
@@ -1125,6 +1140,11 @@ export const INITIAL_STUDENTS: Student[] = [
   }
 ];
 
+export const INITIAL_STUDENTS: Student[] = RAW_STUDENTS.map((s) => ({
+  ...s,
+  team: s.team || getDefaultTeamForStudent(s.id, s.role)
+}));
+
 const todayDate = new Date().toISOString().split('T')[0];
 
 export const INITIAL_ATTENDANCE: AttendanceRecord[] = [
@@ -1170,33 +1190,115 @@ export const INITIAL_VIOLATIONS: ViolationRecord[] = [
 export const INITIAL_REWARDS: RewardRecord[] = [
   {
     id: 'rew-01',
-    studentId: 'hs11a3-36',
-    studentName: 'Nguyễn Lương Tường Vy',
-    date: todayDate,
-    achievement: 'Cán bộ lớp tiêu biểu xuất sắc',
-    content: 'Điều hành nề nếp lớp 11A3 dẫn đầu bảng thi đua toàn trường tháng 9',
-    category: 'Kỷ luật',
-    notes: 'Tuyên dương dưới cờ và khen thưởng trước toàn trường'
-  },
-  {
-    id: 'rew-02',
     studentId: 'hs11a3-38',
     studentName: 'Nguyễn Lương Nhật Vỹ',
+    team: 'Tổ 1',
+    week: 4,
+    activityName: 'Kỳ thi chọn Học sinh giỏi cấp trường & Phụ đạo bạn trong tổ',
     date: todayDate,
-    achievement: 'Giải Nhì môn Toán học cấp trường',
-    content: 'Đạt thành tích xuất sắc trong kỳ thi chọn học sinh giỏi cấp trường',
+    achievement: 'Giải Nhì môn Toán học cấp trường & Dẫn đầu Tổ 1',
+    content: 'Đạt thành tích xuất sắc trong kỳ thi HSG và tổ chức nhóm tự học buổi tối cho các thành viên Tổ 1 đạt 100% điểm khá giỏi.',
     category: 'Học tập',
+    points: 20,
     notes: 'Được tuyên dương trước toàn thể lớp 11A3'
   },
   {
-    id: 'rew-03',
+    id: 'rew-02',
     studentId: 'hs11a3-02',
     studentName: 'Nguyễn Thị Huyền Giang',
+    team: 'Tổ 1',
+    week: 4,
+    activityName: 'Phong trào Hoa điểm 10 & Xây dựng bài',
     date: todayDate,
-    achievement: 'Gương sáng học tập vượt khó',
-    content: 'Đạt điểm 10 kiểm tra định kỳ và tích cực phát biểu xây dựng bài',
+    achievement: 'Gương sáng học tập vượt khó - Tổ 1',
+    content: 'Đạt 3 điểm 10 liên tiếp kiểm tra thường xuyên và tích cực phát biểu xây dựng bài, mang về điểm cộng cao nhất cho Tổ 1.',
     category: 'Học tập',
-    notes: 'Tuyên dương trước lớp'
+    points: 15,
+    notes: 'Tuyên dương dưới cờ đầu tuần'
+  },
+  {
+    id: 'rew-03',
+    studentId: 'hs11a3-25',
+    studentName: 'La O Thị Kim Thủy',
+    team: 'Tổ 2',
+    week: 4,
+    activityName: 'Thi đua Nề nếp & Trực nhật lớp học Xanh - Sạch - Đẹp',
+    date: todayDate,
+    achievement: 'Tổ trưởng điều hành Tổ 2 đạt Giải Nhất thi đua tuần',
+    content: 'Đôn đốc các bạn Tổ 2 hoàn thành xuất sắc công tác trực nhật, vệ sinh khu nội trú và đạt 100% giờ học tốt.',
+    category: 'Hoạt động tổ',
+    points: 20,
+    notes: 'Thưởng điểm cộng tập thể Tổ 2'
+  },
+  {
+    id: 'rew-04',
+    studentId: 'hs11a3-12',
+    studentName: 'Nguyễn Trương Ánh Nguyệt',
+    team: 'Tổ 2',
+    week: 3,
+    activityName: 'Hội thi Kể chuyện tấm gương đạo đức Bác Hồ',
+    date: todayDate,
+    achievement: 'Giải Nhất Hội thi kể chuyện cấp trường',
+    content: 'Đại diện Tổ 2 và chi đoàn 11A3 tham gia hội thi cấp trường đạt Giải Nhất xuất sắc.',
+    category: 'Phong trào',
+    points: 20,
+    notes: 'Nhận giấy khen của Đoàn trường PTDTNT Vân Canh'
+  },
+  {
+    id: 'rew-05',
+    studentId: 'hs11a3-06',
+    studentName: 'Đinh Thị Hường',
+    team: 'Tổ 3',
+    week: 4,
+    activityName: 'Phong trào Văn nghệ & Thể dục thể thao cấp trường',
+    date: todayDate,
+    achievement: 'Dẫn dắt Tổ 3 đạt Giải Nhất kéo co & Múa cồng chiêng',
+    content: 'Tổ trưởng Tổ 3 tích cực tập luyện và cổ vũ các thành viên tham gia hội thao - văn nghệ truyền thống đạt giải cao.',
+    category: 'Thể thao - Văn nghệ',
+    points: 20,
+    notes: 'Tuyên dương trong tiết Sinh hoạt lớp thứ Bảy'
+  },
+  {
+    id: 'rew-06',
+    studentId: 'hs11a3-23',
+    studentName: 'Nguyễn Thị Phương Thảo',
+    team: 'Tổ 3',
+    week: 3,
+    activityName: 'Hoạt động Đôi bạn cùng tiến trong Tổ 3',
+    date: todayDate,
+    achievement: 'Hỗ trợ các bạn trong Tổ 3 cải thiện điểm môn Tiếng Anh',
+    content: 'Kèm cặp 3 bạn trong Tổ 3 nắm vững kiến thức ngữ pháp và đạt điểm Khá bài kiểm tra 15 phút.',
+    category: 'Hoạt động tổ',
+    points: 15,
+    notes: 'GVCN khen ngợi tinh thần đoàn kết'
+  },
+  {
+    id: 'rew-07',
+    studentId: 'hs11a3-36',
+    studentName: 'Nguyễn Lương Tường Vy',
+    team: 'Tổ 4',
+    week: 4,
+    activityName: 'Điều hành chung lớp 11A3 & Hoạt động Tổ 4',
+    date: todayDate,
+    achievement: 'Cán bộ lớp tiêu biểu xuất sắc tháng 9 - 10',
+    content: 'Điều hành nề nếp lớp 11A3 dẫn đầu bảng thi đua toàn trường, hỗ trợ Tổ 4 giữ vững thành tích 0 vi phạm.',
+    category: 'Kỷ luật',
+    points: 25,
+    notes: 'Tuyên dương dưới cờ và khen thưởng trước toàn trường'
+  },
+  {
+    id: 'rew-08',
+    studentId: 'hs11a3-31',
+    studentName: 'Nguyễn Vũ Thị Phương Trâm',
+    team: 'Tổ 4',
+    week: 4,
+    activityName: 'Kiểm tra bài cũ 15 phút đầu giờ & Tự học tối nội trú',
+    date: todayDate,
+    achievement: 'Tổ 4 đạt 100% tiết học tốt & Giờ tự học kiểu mẫu',
+    content: 'Tổ trưởng Tổ 4 kiểm tra bài vở sát sao, tất cả thành viên trong tổ đều thuộc bài và chuẩn bị bài mới đầy đủ.',
+    category: 'Hoạt động tổ',
+    points: 20,
+    notes: 'Cộng điểm thi đua tuần cho Tổ 4'
   }
 ];
 

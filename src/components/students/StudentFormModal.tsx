@@ -19,9 +19,10 @@ import {
   PolicyType, 
   ClassRole,
   AcademicRating,
-  ConductRating 
+  ConductRating,
+  TeamGroup
 } from '../../types';
-import { generateSampleSubjectScores, generateSampleWeeklyEmulation } from '../../mockData';
+import { generateSampleSubjectScores, generateSampleWeeklyEmulation, getDefaultTeamForStudent } from '../../mockData';
 
 interface StudentFormModalProps {
   isOpen: boolean;
@@ -65,6 +66,8 @@ const ROLE_LIST: ClassRole[] = [
   'Thủ quỹ'
 ];
 
+const TEAM_LIST: TeamGroup[] = ['Tổ 1', 'Tổ 2', 'Tổ 3', 'Tổ 4'];
+
 const AVATAR_COLORS = [
   'bg-blue-600', 'bg-emerald-600', 'bg-indigo-600', 'bg-purple-600',
   'bg-rose-600', 'bg-amber-600', 'bg-teal-600', 'bg-cyan-600', 'bg-pink-600'
@@ -94,6 +97,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
     familyBackground: 'Bình thường',
     policyType: 'Không',
     role: 'Học sinh',
+    team: 'Tổ 1',
     academicRating: 'Khá',
     conductRating: 'Tốt',
     notes: '',
@@ -107,7 +111,10 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
 
   useEffect(() => {
     if (initialStudent) {
-      setFormData({ ...initialStudent });
+      setFormData({
+        ...initialStudent,
+        team: initialStudent.team || getDefaultTeamForStudent(initialStudent.id, initialStudent.role)
+      });
     } else {
       const nextNum = totalStudentsCount + 1;
       const codeStr = `11A3-${nextNum < 10 ? '0' + nextNum : nextNum}`;
@@ -128,6 +135,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
         familyBackground: 'Bình thường',
         policyType: 'Không',
         role: 'Học sinh',
+        team: 'Tổ 1',
         academicRating: 'Khá',
         conductRating: 'Tốt',
         notes: '',
@@ -179,6 +187,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
       familyBackground: (formData.familyBackground as FamilyBackground) || 'Bình thường',
       policyType: (formData.policyType as PolicyType) || 'Không',
       role: (formData.role as ClassRole) || 'Học sinh',
+      team: (formData.team as TeamGroup) || 'Tổ 1',
       academicRating: academicRate,
       conductRating: conductRate,
       subjectScores: initialStudent?.subjectScores || generateSampleSubjectScores(academicRate === 'Chưa cập nhật' ? 'Khá' : academicRate),
@@ -294,6 +303,19 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
               </div>
 
               <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Tổ sinh hoạt</label>
+                <select
+                  value={formData.team || 'Tổ 1'}
+                  onChange={(e) => setFormData({ ...formData, team: e.target.value as TeamGroup })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-blue-500 text-sm bg-indigo-50 font-bold text-indigo-800"
+                >
+                  {TEAM_LIST.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Chức vụ trong lớp</label>
                 <select
                   value={formData.role || 'Học sinh'}
@@ -306,7 +328,7 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
                 </select>
               </div>
 
-              <div className="sm:col-span-2">
+              <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Số điện thoại cá nhân (nếu có)</label>
                 <input
                   type="text"

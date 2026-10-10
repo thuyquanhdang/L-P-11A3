@@ -18,7 +18,8 @@ import {
   INITIAL_REWARDS, 
   INITIAL_CONDUCT_EVALUATIONS, 
   INITIAL_PARENT_CONTACTS, 
-  INITIAL_POLICY_DOCUMENTS 
+  INITIAL_POLICY_DOCUMENTS,
+  getDefaultTeamForStudent
 } from '../mockData';
 
 const STORAGE_KEYS = {
@@ -72,12 +73,31 @@ export const getInitialAppState = () => {
     };
   }
 
+  const normalizedStudents = loadedStudents.map((s) => ({
+    ...s,
+    team: s.team || getDefaultTeamForStudent(s.id, s.role)
+  }));
+
+  const rawRewards = loadFromStorage<RewardRecord[]>(STORAGE_KEYS.REWARDS, INITIAL_REWARDS);
+  // If old cached rewards have fewer than 4 items and no team field, upgrade to INITIAL_REWARDS
+  const normalizedRewards = (rawRewards.length <= 3 && !rawRewards[0]?.team)
+    ? INITIAL_REWARDS
+    : rawRewards.map((r) => {
+        const st = normalizedStudents.find((s) => s.id === r.studentId);
+        return {
+          ...r,
+          team: r.team || st?.team || getDefaultTeamForStudent(r.studentId, st?.role),
+          points: r.points ?? 15,
+          week: r.week ?? 4
+        };
+      });
+
   return {
     classInfo: loadedClass,
-    students: loadedStudents,
+    students: normalizedStudents,
     attendance: loadFromStorage<AttendanceRecord[]>(STORAGE_KEYS.ATTENDANCE, INITIAL_ATTENDANCE),
     violations: loadFromStorage<ViolationRecord[]>(STORAGE_KEYS.VIOLATIONS, INITIAL_VIOLATIONS),
-    rewards: loadFromStorage<RewardRecord[]>(STORAGE_KEYS.REWARDS, INITIAL_REWARDS),
+    rewards: normalizedRewards,
     conduct: loadFromStorage<ConductEvaluation[]>(STORAGE_KEYS.CONDUCT, INITIAL_CONDUCT_EVALUATIONS),
     parents: loadFromStorage<ParentContact[]>(STORAGE_KEYS.PARENTS, INITIAL_PARENT_CONTACTS),
     policies: loadFromStorage<PolicyDocumentItem[]>(STORAGE_KEYS.POLICIES, INITIAL_POLICY_DOCUMENTS),

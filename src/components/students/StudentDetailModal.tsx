@@ -30,8 +30,11 @@ import {
   ClassInfo,
   SubjectScore,
   ConductRating,
-  AcademicRating
+  AcademicRating,
+  RewardCategory,
+  TeamGroup
 } from '../../types';
+import { getDefaultTeamForStudent } from '../../mockData';
 
 interface StudentDetailModalProps {
   student: Student | null;
@@ -45,6 +48,7 @@ interface StudentDetailModalProps {
   classInfo: ClassInfo;
   onEditStudent: (student: Student) => void;
   onSaveStudent?: (updatedStudent: Student) => void;
+  onAddReward?: (reward: RewardRecord) => void;
   onAddViolationForStudent?: (studentId: string, studentName: string) => void;
   onAddRewardForStudent?: (studentId: string, studentName: string) => void;
   onAddParentContactForStudent?: (studentId: string, studentName: string) => void;
@@ -61,7 +65,8 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
   parents,
   classInfo,
   onEditStudent,
-  onSaveStudent
+  onSaveStudent,
+  onAddReward
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'academic' | 'conduct' | 'emulation' | 'attendance' | 'parents'>('profile');
   const [editableScores, setEditableScores] = useState<SubjectScore[]>([]);
@@ -71,6 +76,12 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
   const [editableNotes, setEditableNotes] = useState<string>('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveSuccessToast, setSaveSuccessToast] = useState(false);
+  const [showAddActivityForm, setShowAddActivityForm] = useState(false);
+  const [newActivityTitle, setNewActivityTitle] = useState('');
+  const [newActivityName, setNewActivityName] = useState('');
+  const [newActivityContent, setNewActivityContent] = useState('');
+  const [newActivityCategory, setNewActivityCategory] = useState<RewardCategory>('Hoạt động tổ');
+  const [newActivityPoints, setNewActivityPoints] = useState<number>(15);
 
   React.useEffect(() => {
     if (student) {
@@ -604,28 +615,144 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                   )}
                 </div>
 
-                {/* Rewards */}
+                {/* Rewards & Team Activity Achievements */}
                 <div className="bg-white rounded-xl border border-amber-200 p-4 shadow-xs">
-                  <div className="flex justify-between items-center mb-3">
+                  <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
                     <h5 className="font-bold text-amber-900 text-sm flex items-center gap-1.5">
                       <Award className="w-4 h-4 text-amber-600" />
-                      Khen thưởng & Biểu dương ({studentRewards.length})
+                      Thành tích hoạt động Tổ & Khen thưởng ({studentRewards.length})
                     </h5>
+                    {onAddReward && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAddActivityForm(!showAddActivityForm)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition cursor-pointer"
+                      >
+                        <PlusCircle className="w-3.5 h-3.5" />
+                        <span>+ Ghi nhận thành tích</span>
+                      </button>
+                    )}
                   </div>
+
+                  {showAddActivityForm && onAddReward && (
+                    <div className="mb-3 p-3 rounded-xl bg-amber-50/90 border border-amber-200 space-y-2.5 text-xs">
+                      <div className="font-bold text-amber-900 flex items-center justify-between">
+                        <span>Thêm thành tích hoạt động ({student.team || getDefaultTeamForStudent(student.id, student.role)})</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddActivityForm(false)}
+                          className="text-slate-400 hover:text-slate-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Tên thành tích (VD: Hoàn thành tốt trực nhật Tổ, Hoa điểm 10...)"
+                        value={newActivityTitle}
+                        onChange={(e) => setNewActivityTitle(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-medium"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <select
+                          value={newActivityCategory}
+                          onChange={(e) => setNewActivityCategory(e.target.value as RewardCategory)}
+                          className="px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs"
+                        >
+                          <option value="Hoạt động tổ">Hoạt động tổ</option>
+                          <option value="Học tập">Học tập</option>
+                          <option value="Phong trào">Phong trào</option>
+                          <option value="Thể thao - Văn nghệ">Thể thao - Văn nghệ</option>
+                          <option value="Việc tốt">Việc tốt</option>
+                          <option value="Kỷ luật">Kỷ luật</option>
+                        </select>
+                        <select
+                          value={newActivityPoints}
+                          onChange={(e) => setNewActivityPoints(Number(e.target.value))}
+                          className="px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-emerald-700"
+                        >
+                          <option value={10}>+10 điểm tổ</option>
+                          <option value={15}>+15 điểm tổ</option>
+                          <option value={20}>+20 điểm tổ</option>
+                          <option value={30}>+30 điểm tổ</option>
+                        </select>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Tên phong trào / hoạt động cụ thể..."
+                        value={newActivityName}
+                        onChange={(e) => setNewActivityName(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs"
+                      />
+                      <textarea
+                        rows={2}
+                        placeholder="Nội dung chi tiết & hình thức tuyên dương..."
+                        value={newActivityContent}
+                        onChange={(e) => setNewActivityContent(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs"
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newActivityTitle.trim()) return;
+                            const team: TeamGroup = student.team || getDefaultTeamForStudent(student.id, student.role);
+                            onAddReward({
+                              id: `kt-${Date.now()}`,
+                              studentId: student.id,
+                              studentName: student.fullName,
+                              team,
+                              date: new Date().toISOString().split('T')[0],
+                              week: 4,
+                              activityName: newActivityName.trim() || newActivityCategory,
+                              achievement: newActivityTitle.trim(),
+                              content: newActivityContent.trim() || `Tích cực tham gia hoạt động của ${team}`,
+                              category: newActivityCategory,
+                              points: newActivityPoints
+                            });
+                            setNewActivityTitle('');
+                            setNewActivityName('');
+                            setNewActivityContent('');
+                            setShowAddActivityForm(false);
+                            setSaveSuccessToast(true);
+                            setTimeout(() => setSaveSuccessToast(false), 2500);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>Lưu thành tích</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {studentRewards.length === 0 ? (
-                    <p className="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-lg">Chưa có khen thưởng riêng.</p>
+                    <p className="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-lg">Chưa có thành tích hoạt động riêng.</p>
                   ) : (
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                    <div className="space-y-2 max-h-56 overflow-y-auto">
                       {studentRewards.map((r, rIdx) => (
                         <div key={rIdx} className="p-2.5 bg-amber-50/60 rounded-lg border border-amber-100 text-xs space-y-1">
-                          <div className="flex justify-between items-center">
+                          <div className="flex justify-between items-center gap-2">
                             <span className="font-semibold text-amber-950">{r.achievement}</span>
-                            <span className="text-[10px] text-slate-500">{formatDate(r.date)}</span>
+                            <span className="text-[10px] text-slate-500 shrink-0">{formatDate(r.date)}</span>
                           </div>
+                          {r.activityName && (
+                            <p className="text-[11px] text-indigo-700 font-medium">Hoạt động: {r.activityName}</p>
+                          )}
                           <p className="text-slate-600">{r.content}</p>
-                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">
-                            {r.category}
-                          </span>
+                          <div className="flex items-center gap-1.5 pt-0.5">
+                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800">
+                              {r.team || student.team || getDefaultTeamForStudent(student.id, student.role)}
+                            </span>
+                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">
+                              {r.category}
+                            </span>
+                            {r.points && (
+                              <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                +{r.points} điểm
+                              </span>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

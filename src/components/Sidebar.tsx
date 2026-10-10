@@ -69,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     { 
       id: 'rewards' as ActiveTab, 
-      label: 'Khen thưởng', 
+      label: 'Thi đua & Hoạt động tổ', 
       icon: Award,
       badge: counts.rewards > 0 ? counts.rewards.toString() : null,
       badgeColor: 'bg-amber-500 text-white'

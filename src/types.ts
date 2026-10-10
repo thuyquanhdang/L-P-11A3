@@ -54,6 +54,8 @@ export type ClassRole =
 export type AcademicRating = 'Tốt' | 'Khá' | 'Đạt' | 'Chưa đạt' | 'Chưa cập nhật';
 export type ConductRating = 'Tốt' | 'Khá' | 'Đạt' | 'Chưa đạt' | 'Chưa cập nhật';
 
+export type TeamGroup = 'Tổ 1' | 'Tổ 2' | 'Tổ 3' | 'Tổ 4';
+
 export interface SubjectScore {
   subjectName: string;
   tx1?: number; // Thường xuyên 1
@@ -82,6 +84,7 @@ export interface Student {
   familyBackground: FamilyBackground;
   policyType: PolicyType;
   role?: ClassRole;
+  team?: TeamGroup;
   academicRating?: AcademicRating;
   conductRating?: ConductRating;
   subjectScores?: SubjectScore[];
@@ -121,16 +124,20 @@ export interface ViolationRecord {
   resolved: boolean;
 }
 
-export type RewardCategory = 'Học tập' | 'Phong trào' | 'Kỷ luật' | 'Việc tốt' | 'Thể thao - Văn nghệ';
+export type RewardCategory = 'Học tập' | 'Phong trào' | 'Kỷ luật' | 'Việc tốt' | 'Thể thao - Văn nghệ' | 'Hoạt động tổ';
 
 export interface RewardRecord {
   id: string;
   studentId: string;
   studentName: string;
+  team?: TeamGroup;
   date: string; // YYYY-MM-DD
+  week?: number;
+  activityName?: string;
   achievement: string;
   content: string;
   category: RewardCategory;
+  points?: number; // Điểm cộng thi đua tổ (+5, +10, +15, +20...)
   notes?: string;
 }
 

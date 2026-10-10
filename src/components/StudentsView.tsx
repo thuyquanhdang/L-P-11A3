@@ -44,6 +44,7 @@ import { StudentDetailModal } from './students/StudentDetailModal';
 import { StudentFormModal } from './students/StudentFormModal';
 import { DeleteStudentModal } from './students/DeleteStudentModal';
 import { ImportExportModal } from './students/ImportExportModal';
+import { getDefaultTeamForStudent } from '../mockData';
 
 interface StudentsViewProps {
   students: Student[];
@@ -57,6 +58,7 @@ interface StudentsViewProps {
   onAddStudent: (student: Student) => void;
   onUpdateStudent: (student: Student) => void;
   onDeleteStudent: (studentId: string) => void;
+  onAddReward?: (reward: RewardRecord) => void;
   initialSelectedStudent?: Student | null;
   onClearInitialSelected?: () => void;
 }
@@ -87,6 +89,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   onAddStudent,
   onUpdateStudent,
   onDeleteStudent,
+  onAddReward,
   initialSelectedStudent = null,
   onClearInitialSelected
 }) => {
@@ -144,12 +147,15 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         (filterPolicy === 'policy' ? s.policyType !== 'Không' : s.policyType === 'Không');
       
       let matchRole = true;
+      const stTeam = s.team || getDefaultTeamForStudent(s.id, s.role);
       if (filterRole === 'officers') {
         matchRole = !!(s.role && s.role !== 'Học sinh');
       } else if (filterRole === 'attention') {
         matchRole = s.needsAttention;
       } else if (filterRole === 'progressing') {
         matchRole = s.isProgressing;
+      } else if (filterRole.startsWith('Tổ ')) {
+        matchRole = stTeam === filterRole;
       }
 
       return matchSearch && matchGender && matchEthnicity && matchAcademic && matchConduct && matchPolicy && matchRole;
@@ -478,13 +484,17 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Chức vụ / Đối tượng</label>
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Tổ / Đối tượng</label>
             <select
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value)}
               className="w-full p-2 rounded-lg border border-slate-200 bg-white text-slate-800 font-medium focus:ring-1 focus:ring-blue-500"
             >
-              <option value="all">Tất cả đối tượng</option>
+              <option value="all">Tất cả 4 Tổ & Đối tượng</option>
+              <option value="Tổ 1">Tổ 1 (TT: Nhật Vỹ)</option>
+              <option value="Tổ 2">Tổ 2 (TT: Kim Thủy)</option>
+              <option value="Tổ 3">Tổ 3 (TT: Thị Hường)</option>
+              <option value="Tổ 4">Tổ 4 (TT: Phương Trâm)</option>
               <option value="officers">Cán bộ lớp / Tổ trưởng</option>
               <option value="attention">Cần quan tâm đặc biệt</option>
               <option value="progressing">Có tiến bộ biểu dương</option>
@@ -587,6 +597,9 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                               </div>
                               <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
                                 <span className="font-mono">{st.code}</span>
+                                <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+                                  {st.team || getDefaultTeamForStudent(st.id, st.role)}
+                                </span>
                                 {st.needsAttention && (
                                   <span className="text-rose-600 font-semibold flex items-center gap-0.5">
                                     <AlertTriangle className="w-3 h-3" /> Cần quan tâm
@@ -887,6 +900,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           onUpdateStudent(updatedSt);
           setSelectedStudentForDetail(updatedSt);
           showSaveToast(`Đã lưu thay đổi hồ sơ học sinh ${updatedSt.fullName}!`);
+        }}
+        onAddReward={(reward) => {
+          if (onAddReward) {
+            onAddReward(reward);
+            showSaveToast(`Đã lưu thành tích hoạt động của em ${reward.studentName} (${reward.team || 'Tổ'})!`);
+          }
         }}
       />
 

@@ -316,6 +316,7 @@ export default function App() {
               onAddStudent={handleAddStudent}
               onUpdateStudent={handleUpdateStudent}
               onDeleteStudent={handleDeleteStudent}
+              onAddReward={handleAddReward}
               initialSelectedStudent={selectedStudentForModal}
               onClearInitialSelected={() => setSelectedStudentForModal(null)}
             />
@@ -344,9 +345,11 @@ export default function App() {
             <RewardsView
               students={students}
               rewards={rewards}
+              classInfo={classInfo}
               onAddReward={handleAddReward}
               onUpdateReward={handleUpdateReward}
               onDeleteReward={handleDeleteReward}
+              onUpdateStudent={handleUpdateStudent}
             />
           )}
 
